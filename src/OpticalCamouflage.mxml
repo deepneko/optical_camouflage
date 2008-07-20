@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Application xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" creationComplete="creationCompleteHandler()"
+		backgroundGradientAlphas="[1.0, 1.0]" backgroundGradientColors="[#FFFFFF, #FFFFFF]">
+
+	<mx:Script>
+		<![CDATA[
+			import flash.filters.BlurFilter;
+		
+			private var camera:Camera;
+			private var bmpBackground:BitmapData;
+			private var matrix:Matrix = new Matrix();
+			private var point:Point = new Point();
+			private var colorTransform:ColorTransform = new ColorTransform();
+			private var blur:BlurFilter = new BlurFilter(10, 10, 1);
+			
+			private function creationCompleteHandler():void{
+			    camera = Camera.getCamera();
+				if (camera != null) {
+					camera.setQuality(0, 100);
+					camera.setMode(400, 320, 60, true);
+					camera.setMotionLevel(slider.value);
+					camera.addEventListener(ActivityEvent.ACTIVITY, cameraActiveHandler);
+					video.attachCamera(camera);
+				}
+			}
+			
+			/*
+			 * カメラがActiveになった場合
+			 */
+			private function cameraActiveHandler(e:ActivityEvent):void{
+				setBackGround();
+			}
+
+			/*
+			 * ボタンをクリックした場合
+			 */
+			private function clickHandler():void{
+				setBackGround();
+			}
+			
+			/*
+			 * スライダーを動かした場合
+			 */
+            private function sliderChangeHandler():void {
+            	camera.setMotionLevel(slider.value);
+            }
+
+			/*
+			 * 現在Webカメラにうつってる映像を背景(静止画)として保存する
+			 */
+			private function setBackGround():void{
+				bmpBackground = new BitmapData(video.width, video.height);
+				bmpBackground.draw(video);
+				this.addEventListener(Event.ENTER_FRAME, onEnterFrame);
+			}
+			
+			private function onEnterFrame(e:Event):void{
+
+				//フィルタ画像
+				var bd:BitmapData = new BitmapData(video.width, video.height);
+				bd.draw(video);
+				bd.draw(bmpBackground, matrix, colorTransform, BlendMode.DIFFERENCE);
+
+				//合成
+				var bdMix:BitmapData = new BitmapData(video.width, video.height);
+				bdMix.draw(video);
+				bdMix.applyFilter(bd, bd.rect, point, blur);
+				bdMix.draw(bmpBackground, matrix, colorTransform, BlendMode.DIFFERENCE);
+				
+				//表示
+				var bmp:Bitmap = new Bitmap(bdMix);
+				ghost.source = bmp;
+			}
+		]]>
+	</mx:Script>
+
+	<mx:Panel width="847" height="461" layout="absolute" y="10" x="10">
+		<mx:VideoDisplay id="video" width="400" height="320" top="10" left="10"/>
+		<mx:Image id="ghost" x="417" y="10" width="400" height="320"/>
+		<mx:Label x="250.5" y="347" text="Motion Level"/>
+		<mx:HSlider id="slider" change="sliderChangeHandler()" x="333.5" y="338" 
+			value="50" tickInterval="25" snapInterval="1" labels="[0,50,100]" maximum="100" minimum="0"/>
+		<mx:Button id="button" click="clickHandler()" x="338.5" y="384" label="Init Background" width="150" height="27"/>
+	</mx:Panel>
+
+</mx:Application>
